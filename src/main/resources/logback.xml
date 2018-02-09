@@ -1,49 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
-<!-- For assistance related to logback-translator or configuration -->
-<!-- files in general, please contact the logback user mailing list -->
-<!-- at http://www.qos.ch/mailman/listinfo/logback-user -->
-<!-- -->
-<!-- For professional support please see -->
-<!-- http://www.qos.ch/shop/products/professionalSupport -->
-<!-- -->
 <configuration>
+	
+	<!-- 日志文件路径 -->   
+	<property name="LOG_PATH" value="logs" />
+	<property name="ENCODER_PATTERN" value="%date{yyyy-MM-dd HH:mm:ss.SSS} %p [%c][%method:%L] - %m%n" />
+
+	<!-- 控制台输出 -->   
 	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
-		<Target>System.out</Target>
+		<target>System.out</target>
 		<encoder>
-			<pattern>%d{HH:mm:ss.SSS} %5p [%t] [%c{1}]:%L - %m%n</pattern>
+			<pattern>${ENCODER_PATTERN}</pattern>  
 		</encoder>
 	</appender>
-	<appender name="logfile"
-		class="ch.qos.logback.core.rolling.RollingFileAppender">
-		<!--See http://logback.qos.ch/manual/appenders.html#RollingFileAppender -->
-		<!--and http://logback.qos.ch/manual/appenders.html#TimeBasedRollingPolicy -->
-		<!--for further documentation -->
+	
+	<!-- 按照每天生成日志文件 -->   
+	<appender name="logfile" class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<encoder>
-			<pattern>%d %p [%t] [%c]:%L - %m%n</pattern>
+			<pattern>${ENCODER_PATTERN}</pattern>
 		</encoder>
 		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
 			<level>DEBUG</level>
 		</filter>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<fileNamePattern>log/%d{yyyy-MM-dd-HH'.log'}</fileNamePattern>
+			<!--日志文件输出的文件名-->
+			<fileNamePattern>${LOG_PATH}/%d{yyyy-MM-dd'.log'}</fileNamePattern>
+			<!--日志文件保留天数-->
+            <MaxHistory>30</MaxHistory>
 		</rollingPolicy>
 	</appender>
-	<logger name="org.springframework" level="WARN" />
-	<logger name="org.springframework.boot" level="WARN" />
-	<logger name="org.springframework.remoting" level="WARN" />
-	<logger name="org.springframework.scheduling.quartz" level="WARN" />
-	<logger name="org.springframework.data.jpa" level="DEBUG" />
-	<logger name="org.cometd" level="WARN" />
-	<logger name="ch.qos.logback" level="WARN" />
-	<logger name="com.springapp.mvc" level="DEBUG" />
 	
+	<!-- JPA打印SQL -->
 	<logger name="org.springframework.jdbc.core" additivity="false" level="DEBUG" >  
         <appender-ref ref="stdout" />  
     </logger>   
+    
+    <logger name="com.zd" level="DEBUG" additivity="false">  
+    	<appender-ref ref="stdout"/>  
+  	</logger>   
+  	<logger name="com.soecode" level="DEBUG" additivity="false">  
+    	<appender-ref ref="stdout"/>  
+  	</logger>
+ 
 
-	<root level="ERROR">
+	<!-- 生产环境下，将此级别配置为适合的级别，以免日志文件太多或影响程序性能 -->
+	<!-- TRACE < DEBUG < INFO < WARN < ERROR < FATAL -->
+	<root level="INFO">
+		<!-- 生产环境将请stdout去掉 -->
 		<appender-ref ref="stdout" />
-		<appender-ref ref="logfile" />
+		<!-- <appender-ref ref="logfile" /> -->
 	</root>
 </configuration>

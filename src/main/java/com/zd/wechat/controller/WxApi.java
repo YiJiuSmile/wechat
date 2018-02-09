@@ -2,7 +2,7 @@ package com.zd.wechat.controller;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +12,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.shiro.crypto.hash.Sha256Hash;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -27,46 +29,85 @@ import com.soecode.wxtools.api.WxConsts;
 import com.soecode.wxtools.api.WxMessageRouter;
 import com.soecode.wxtools.bean.TemplateSender;
 import com.soecode.wxtools.bean.WxJsapiConfig;
+import com.soecode.wxtools.bean.WxMenu;
 import com.soecode.wxtools.bean.WxUserList.WxUser;
 import com.soecode.wxtools.bean.WxUserList.WxUser.WxUserGet;
 import com.soecode.wxtools.bean.WxXmlMessage;
 import com.soecode.wxtools.bean.WxXmlOutMessage;
+import com.soecode.wxtools.bean.result.TemplateListResult;
 import com.soecode.wxtools.bean.result.TemplateSenderResult;
+import com.soecode.wxtools.bean.result.WxError;
+import com.soecode.wxtools.bean.result.WxMenuResult;
 import com.soecode.wxtools.bean.result.WxOAuth2AccessTokenResult;
 import com.soecode.wxtools.exception.WxErrorException;
 import com.soecode.wxtools.util.xml.XStreamTransformer;
+import com.zd.wechat.entity.WechatConfig;
+import com.zd.wechat.entity.WechatTemplate;
 import com.zd.wechat.entity.WechatUser;
 import com.zd.wechat.handler.WxMsgHandler;
+import com.zd.wechat.repository.WechatTemplateRepository;
 import com.zd.wechat.repository.WechatUserRepository;
+import com.zd.wechat.util.BaseResult;
 
 @Controller
 @RequestMapping("/wxApi")
 public class WxApi implements ApplicationRunner {
 
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
 	private Map<String, String> variables = new HashMap<String, String>();
+
+	@Autowired
+	private IService iService;
+	@Autowired
+	private WxMsgHandler wxMsgHandler;
+	
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private WechatUserRepository wechatUserRepository;
+	@Autowired
+	private WechatTemplateRepository wechatTemplateRepository;
+
+	
+	
 
 	/**
 	 * 程序启动自动加载变量 如果不需要自动加载无需实现ApplicationRunner
 	 */
 	@Override
-	public void run(ApplicationArguments var1) throws Exception {
+	public void run(ApplicationArguments var1) {
 		String schoolName = jdbcTemplate.queryForObject("SELECT SCHOOL_NAME FROM dbo.BASE_T_SCHOOL", String.class);
 		variables.put("SCHOOL_NAME", schoolName);
 	}
 
-	@Autowired
-	private IService iService;
+	// 获取微信配置
+	@RequestMapping("getConfig")
+	public @ResponseBody WxConfig getConfig(HttpServletRequest request, HttpServletResponse response) {
+		WxConfig wxConfig = WxConfig.getInstance();
+		if (logger.isDebugEnabled()) {
+			logger.debug("获取微信配置:{}", wxConfig.toString());
+		}
+		return wxConfig;
+	}
 
-	@Autowired
-	private WechatUserRepository wechatUserRepository;
+	// 更新微信配置
+	@RequestMapping("setConfig")
+	public @ResponseBody String setConfig(WechatConfig config, HttpServletRequest request,
+			HttpServletResponse response) {
+		try {
+			WxConfig wxConfig = WxConfig.getInstance().resetConfig(config);
+			if (logger.isDebugEnabled()) {
+				logger.debug("更新微信配置成功:{}", wxConfig.toString());
+			}
+			return "更新配置成功";
+		} catch (Exception e) {
+			logger.error("更新微信配置失败", e);
+			return "更新配置失败";
+		}
+	}
 
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
-
-	@Autowired
-	private WxMsgHandler wxMsgHandler;
-
-	// 微信公众号服务器配置认证
+	// 微信公众号接口配置
 	@RequestMapping(value = "auth", method = RequestMethod.GET)
 	public void auth(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		PrintWriter out = response.getWriter();
@@ -74,8 +115,12 @@ public class WxApi implements ApplicationRunner {
 		String timestamp = request.getParameter("timestamp");
 		String nonce = request.getParameter("nonce");
 		String echostr = request.getParameter("echostr");
-		if (iService.checkSignature(signature, timestamp, nonce, echostr)) {
+		boolean checkSignature = iService.checkSignature(signature, timestamp, nonce, echostr);
+		if (checkSignature) {
+			logger.info("微信接口信息验证成功!");
 			out.print(echostr);
+		} else {
+			logger.error("微信接口信息验证失败,请检查微信和程序配置是否一致!");
 		}
 	}
 
@@ -120,8 +165,9 @@ public class WxApi implements ApplicationRunner {
 				router.rule().handler(wxMsgHandler).end();
 				// 把消息传递给路由器进行处理
 				WxXmlOutMessage xmlOutMsg = router.route(wx);
-				if (xmlOutMsg != null)
+				if (xmlOutMsg != null) {
 					out.print(xmlOutMsg.toXml());// 因为是明文，所以不用加密，直接返回给用户。
+				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -135,8 +181,7 @@ public class WxApi implements ApplicationRunner {
 	public void jumpTo(HttpServletRequest request, HttpServletResponse response) throws WxErrorException, IOException {
 		// 进入这方法默认跳转到index.jsp,并把这方法获得所有的参数封装到state里
 		// jumpTo?url=www.baidu.com --> index.jsp?state=?url=www.baidu.com
-		String indexJspPath = "";
-		indexJspPath = request.getScheme() + "://" + request.getServerName()
+		String indexJspPath = request.getScheme() + "://" + request.getServerName()
 		// + ":" + request.getServerPort()
 		// + request.getServletPath()
 				+ "/index.jsp";
@@ -156,7 +201,7 @@ public class WxApi implements ApplicationRunner {
 		String code = request.getParameter("code");
 		WxOAuth2AccessTokenResult result = iService.oauth2ToGetAccessToken(code);
 		WechatUser wechatUser = wechatUserRepository.findOne(result.getOpenid());
-		if (null == wechatUser) {
+		if (wechatUser == null) {
 			wechatUser = new WechatUser();
 			wechatUser.setBinding(false);
 			wechatUser.setOpenid(result.getOpenid());
@@ -219,6 +264,97 @@ public class WxApi implements ApplicationRunner {
 		return wechatUser;
 	}
 
+	// 获取jsApi
+	@RequestMapping("getJsApi")
+	public @ResponseBody WxJsapiConfig getJsApi(HttpServletRequest request, HttpServletResponse response) {
+		String[] jsApiList = request.getParameterValues("jsApiList");
+		if (jsApiList == null) {
+			jsApiList = request.getParameterValues("jsApiList[]");
+		}
+		String jssdkUrl = request.getHeader("Referer");
+		try {
+			// 把config返回到前端进行js调用即可。
+			WxJsapiConfig config = iService.createJsapiConfig(jssdkUrl, Arrays.asList(jsApiList));
+			return config;
+		} catch (WxErrorException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	// 获取现有微信菜单配置
+	@RequestMapping("getMenu")
+	public @ResponseBody BaseResult getWxMenu(HttpServletRequest request, HttpServletResponse response) {
+		BaseResult result = new BaseResult();
+		try {
+			WxMenuResult menu = iService.getMenu();
+			result.setData(menu.getMenu().toJson());
+		} catch (Exception e) {
+			result.setSuccess(false);
+			result.setMessages(e.getMessage());
+		}
+		return result;
+	}
+
+	// 创建菜单
+	@RequestMapping("createMenu")
+	public @ResponseBody BaseResult createMenu(HttpServletRequest request, HttpServletResponse response) {
+		BaseResult result = new BaseResult();
+		try {
+			String menu = request.getParameter("menu");
+			WxMenu wxMenu = WxMenu.fromJson(menu);
+			// 参数1--menu ，参数2--是否是个性化定制。如果是个性化菜单栏，需要设置MenuRule
+			String createResult = iService.createMenu(wxMenu, false);
+			WxError wxError = WxError.fromJson(createResult);
+			if (wxError.getErrcode() != 0) {
+				result.setSuccess(false);
+				result.setMessages(wxError.toString());
+			}
+		} catch (Exception e) {
+			result.setSuccess(false);
+			result.setMessages(e.toString());
+			logger.error("创建菜单失败!", e);
+		}
+		return result;
+	}
+	
+	@RequestMapping("saveTemplate")
+	public @ResponseBody BaseResult saveTemplate(WechatTemplate template,HttpServletRequest request, HttpServletResponse response) {
+		BaseResult result = new BaseResult();
+		try {
+			wechatTemplateRepository.save(template);
+			result.setMessages("保存成功");
+		} catch (Exception e) {
+			result.setSuccess(false);
+			result.setMessages(e.toString());
+			logger.error("保存模版失败!", e);
+		}
+		return result;
+	}
+	
+	@RequestMapping("wechatTemplateList")
+	public @ResponseBody List<WechatTemplate> wechatTemplateList(HttpServletRequest request, HttpServletResponse response) {
+		List<WechatTemplate> list=wechatTemplateRepository.findAll();
+		return list;
+	}
+
+	@RequestMapping("templateList")
+	public @ResponseBody BaseResult templateList(HttpServletRequest request, HttpServletResponse response) {
+		BaseResult result = new BaseResult();
+		try {
+			TemplateListResult templateListResult = iService.templateGetList();
+			if (logger.isDebugEnabled()) {
+				logger.debug("获取到的模版列表:{}",templateListResult);
+			}
+			result.setData(templateListResult.toJson());
+		} catch (Exception e) {
+			result.setSuccess(false);
+			result.setMessages(e.toString());
+			logger.error("获取模板列表失败!", e);
+		}
+		return result;
+	}
+
 	@RequestMapping("templateSender")
 	public void templateSender(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		TreeMap<String, TreeMap<String, String>> params = new TreeMap<String, TreeMap<String, String>>();
@@ -234,32 +370,13 @@ public class WxApi implements ApplicationRunner {
 		sender.setUrl("http://www.baidu.com");
 		try {
 			TemplateSenderResult result = iService.templateSend(sender);
-			System.out.println(result.toString());
+			// System.out.println(result.toString());
 		} catch (WxErrorException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		PrintWriter out = response.getWriter();
 		out.println("发送成功");
-	}
-
-	@RequestMapping("getJsApi")
-	public @ResponseBody WxJsapiConfig getJsApi(HttpServletRequest request, HttpServletResponse response) {
-		List<String> jsApiList = new ArrayList<String>();
-		String jssdkUrl = request.getHeader("Referer");
-		System.out.println(jssdkUrl);
-		// 需要用到哪些JS SDK API 就设置哪些
-		jsApiList.add("checkJsApi");// 拍照或从手机相册中选图接口
-		jsApiList.add("scanQRCode");// 获取“分享到QQ空间”按钮点击状态及自定义分享内容接口
-		try {
-			// 把config返回到前端进行js调用即可。
-			WxJsapiConfig config = iService.createJsapiConfig(jssdkUrl, jsApiList);
-			return config;
-		} catch (WxErrorException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
-		}
 	}
 
 	public TreeMap<String, String> item(String value, String color) {

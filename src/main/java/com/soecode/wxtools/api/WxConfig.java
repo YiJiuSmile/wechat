@@ -1,12 +1,21 @@
 package com.soecode.wxtools.api;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
+import javax.annotation.PostConstruct;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
 
 import com.soecode.wxtools.bean.WxAccessToken;
+import com.soecode.wxtools.exception.WxErrorException;
+import com.soecode.wxtools.util.StringUtils;
 import com.zd.wechat.entity.WechatConfig;
 import com.zd.wechat.repository.WechatConfigRepository;
 
@@ -19,32 +28,48 @@ import com.zd.wechat.repository.WechatConfigRepository;
  */
 @Service
 public class WxConfig implements ApplicationRunner {
-	private static final String configFile = "/wx.properties";
-	
-	private static WxConfig config = null;
-	
-	@Autowired
-	private WxConfig wxConfig;
+
+	// private static final String configFile = "/wx.properties";
+
+	private static WxConfig config;
+
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	@Autowired
 	private WechatConfigRepository wechatConfigRepository;
 
+	@PostConstruct
+	private void init() {
+		config = this;
+	}
+
+	// 程序启动自动从数据库加载微信的配置
 	@Override
-	public void run(ApplicationArguments var1) throws Exception {
+	public void run(ApplicationArguments var1) {
 		try {
 			WechatConfig config = wechatConfigRepository.findAll().get(0);
-			this.appId = config.getAppId();
-			this.appSecret = config.getAppSecret();
-			this.token = config.getToken();
-			this.aesKey = config.getAesKey();
-			this.mchId = config.getMchId();
-			this.apiKey = config.getApiKey();
-			this.config = wxConfig;
-			System.out.println("加载微信配置项成功");
+			initConfig(config);
+		} catch (IndexOutOfBoundsException e) {
+			logger.error("获取微信配置失败,请检查数据库[Wechat_T_Config]表的配置,或到config.jsp配置");
 		} catch (Exception e) {
-			e.printStackTrace();
-			System.out.println("请检查数据库[Wechat_T_Config]表的配置");
+			logger.error("获取微信配置失败", e);
 		}
+	}
+
+	private void initConfig(WechatConfig wechatConfig) {
+		config.appId = wechatConfig.getAppId();
+		config.appSecret = wechatConfig.getAppSecret();
+		config.token = wechatConfig.getToken();
+		config.aesKey = wechatConfig.getAesKey();
+		config.mchId = wechatConfig.getMchId();
+		config.apiKey = wechatConfig.getApiKey();
+	}
+
+	public WxConfig resetConfig(WechatConfig wechatConfig) {
+		initConfig(wechatConfig);
+		wechatConfigRepository.deleteAll();
+		wechatConfigRepository.save(wechatConfig);
+		return config;
 	}
 
 	// 配置文件读取项
@@ -61,47 +86,46 @@ public class WxConfig implements ApplicationRunner {
 	private volatile String jsapiTicket;
 	private volatile long jsapiTicketExpiresTime;
 
-	/*public WxConfig() {
-		// 写读配置文件代码
-		Properties p = new Properties();
-		InputStream inStream = this.getClass().getResourceAsStream(configFile);
-		if (inStream == null) {
-			try {
-				throw new WxErrorException("根目录找不到文件");
-			} catch (WxErrorException e) {
-				e.printStackTrace();
-			}
-		}
-		try {
-			p.load(inStream);
-			this.appId = p.getProperty("wx.appId");
-			if (StringUtils.isNotBlank(this.appId))
-				this.appId = this.appId.trim();
-			this.appSecret = p.getProperty("wx.appSecret");
-			if (StringUtils.isNotBlank(this.appSecret))
-				this.appSecret = this.appSecret.trim();
-			this.token = p.getProperty("wx.token");
-			if (StringUtils.isNotBlank(this.token))
-				this.token = this.token.trim();
-			this.aesKey = p.getProperty("wx.aesKey");
-			if (StringUtils.isNotBlank(this.aesKey))
-				this.aesKey = this.aesKey.trim();
-			this.mchId = p.getProperty("wx.mchId");
-			if (StringUtils.isNotBlank(this.mchId))
-				this.mchId = this.mchId.trim();
-			this.apiKey = p.getProperty("wx.apiKey");
-			if (StringUtils.isNotBlank(this.apiKey))
-				this.apiKey = this.apiKey.trim();
-			inStream.close();
-		} catch (IOException e) {
-			try {
-				throw new WxErrorException("load wx.properties error,class根目录下找不到wx.properties文件");
-			} catch (WxErrorException e1) {
-				e1.printStackTrace();
-			}
-		}
-		System.out.println("load wx.properties success");
-	}*/
+//	public WxConfig() { // 写读配置文件代码
+//		Properties p = new Properties();
+//		InputStream inStream = this.getClass().getResourceAsStream(configFile);
+//		if (inStream == null) {
+//			try {
+//				throw new WxErrorException("根目录找不到文件");
+//			} catch (WxErrorException e) {
+//				e.printStackTrace();
+//			}
+//		}
+//		try {
+//			p.load(inStream);
+//			this.appId = p.getProperty("wx.appId");
+//			if (StringUtils.isNotBlank(this.appId))
+//				this.appId = this.appId.trim();
+//			this.appSecret = p.getProperty("wx.appSecret");
+//			if (StringUtils.isNotBlank(this.appSecret))
+//				this.appSecret = this.appSecret.trim();
+//			this.token = p.getProperty("wx.token");
+//			if (StringUtils.isNotBlank(this.token))
+//				this.token = this.token.trim();
+//			this.aesKey = p.getProperty("wx.aesKey");
+//			if (StringUtils.isNotBlank(this.aesKey))
+//				this.aesKey = this.aesKey.trim();
+//			this.mchId = p.getProperty("wx.mchId");
+//			if (StringUtils.isNotBlank(this.mchId))
+//				this.mchId = this.mchId.trim();
+//			this.apiKey = p.getProperty("wx.apiKey");
+//			if (StringUtils.isNotBlank(this.apiKey))
+//				this.apiKey = this.apiKey.trim();
+//			inStream.close();
+//		} catch (IOException e) {
+//			try {
+//				throw new WxErrorException("load wx.properties error,class根目录下找不到wx.properties文件");
+//			} catch (WxErrorException e1) {
+//				e1.printStackTrace();
+//			}
+//		}
+//		System.out.println("load wx.properties success");
+//	}
 
 	/**
 	 * 同步获取/加载单例
@@ -109,9 +133,6 @@ public class WxConfig implements ApplicationRunner {
 	 * @return
 	 */
 	public static synchronized WxConfig getInstance() {
-		if (config == null) {
-			config = new WxConfig();
-		}
 		return config;
 	}
 

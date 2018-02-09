@@ -2,10 +2,10 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.zb</groupId>
-	<artifactId>wechattest</artifactId>
+	<artifactId>wechat</artifactId>
 	<packaging>war</packaging>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>wechattest Maven Webapp</name>
+	<name>wechat Maven Webapp</name>
 	<url>http://maven.apache.org</url>
 
 	<repositories>
@@ -88,6 +88,13 @@
 			<artifactId>jstl</artifactId>
 			<version>1.2</version>
 		</dependency>
+		
+		<!-- rabbitmq -->
+		<dependency>
+            <groupId>com.rabbitmq</groupId>
+            <artifactId>amqp-client</artifactId>
+            <version>3.6.5</version>
+ 		</dependency>
 
 		<!-- 补全依赖 -->
 		<!-- 1：日志； java日志：slf4j，log4j，logback，common-logging slf4j接口/规范 log4j,logback,common-logging，实现 
@@ -149,6 +156,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
+<!-- 					<mainClass>com.Application</mainClass> -->
 					<!--fork: 如果没有该项配置，肯呢个devtools不会起作用，即应用不会restart -->
 					<fork>true</fork>
 				</configuration>

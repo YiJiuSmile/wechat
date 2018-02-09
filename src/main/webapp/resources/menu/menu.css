@@ -1,0 +1,117 @@
+﻿.list-group-item {
+    cursor: pointer;
+    height: 42px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow:ellipsis;
+    white-space: nowrap;
+}
+
+    .list-group-item:last-child {
+        margin-bottom: -1px;
+        border-bottom-right-radius: 0px;
+        border-bottom-left-radius: 0px;
+    }
+
+.list-group-item-selected {
+    color: #31708f !important;
+    background-color: #d9edf7 !important;
+}
+
+.bn {
+    border: none;
+    -ms-box-shadow: none;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+    cursor: default;
+}
+
+.notes {
+    font-size: 3px;
+    color: #aaa;
+    padding-left: 15px;
+}
+
+.clearFill {
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    -moz-min-width: 1100px !important;
+    -ms-min-width: 1100px !important;
+    -o-min-width: 1100px !important;
+    -webkit-min-width: 1100px !important;
+    min-width: 1100px !important;
+}
+
+.emojipar {
+    width: 302px;
+    height: 185px;
+    background: rgb(255, 255, 255);
+    border: 1px solid rgb(226, 226, 226);
+    padding: 10px;
+    border-radius: 4px;
+    float: left;
+    z-index: 10;
+    position: absolute;
+    margin-left: 8px;
+    display: none;
+}
+    .emojipar .caret {
+        position: absolute;
+        transform: rotate(90deg);
+        left: -9px;
+        top: 13px;
+    }
+
+    .emojipar .title {
+        font-size: 14px;
+        color: #333;
+        margin-top: -5px;
+    }
+
+.emojilistbox {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding-top: 30px;
+}
+
+.emojilist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: auto;
+    margin-left: 5px;
+}
+    
+
+.emojilist li {
+    padding: 1px;
+    width: 24px;
+    height: 24px;
+    border: 1px solid #FFF;
+    border-radius: 2px;
+    float: left;
+    margin: 3px;
+    cursor: pointer;
+}
+
+    .emojilist li:hover {
+        border: 1px solid #5fb878;
+    }
+
+    .emojilist li.active {
+        border: 1px solid #5fb878;
+    }
+
+    .emojilist li > div {
+        width: 100%;
+        height: 100%;
+        border-radius: 2px;
+        text-align: center;
+    }

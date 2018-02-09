@@ -16,15 +16,15 @@ import java.util.Date;
 public class DateUtil {
 	/**
 	 * 计算当前周
-	 * 
+	 *
 	 * @param startDate 起始周
 	 * @return
-	 */	
+	 */
 	public static String getCurrentWeek(String date){
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 		String week = "";
 		try {
-			System.out.println("date-- : " + date);
+			//System.out.println("date-- : " + date);
 			if(date!=null){
 				Date startDate = sdf.parse(date);
 				int startDay = (int) (startDate.getTime() / 1000 / 60 / 60 / 24);
@@ -36,7 +36,7 @@ public class DateUtil {
 		}
 		return week;
 	}
-	
+
 	/**
 	 * 获取星期几
 	 * @param date
@@ -44,10 +44,10 @@ public class DateUtil {
 	 */
 	public static String getWeekOfDate(Date date){
 		SimpleDateFormat sdf = new SimpleDateFormat("EEEE");
-		String week = sdf.format(date);  
+		String week = sdf.format(date);
 		return week;
 	}
-	
+
 	/**
 	 * 日期date类型转字符串
 	 * @param date
@@ -57,7 +57,7 @@ public class DateUtil {
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		return sdf.format(date);
 	}
-	
+
 	/**
 	 * 获取当前日期
 	 * @return date
@@ -66,7 +66,7 @@ public class DateUtil {
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		return sdf.format(new Date());
 	}
-	
+
 	/**
 	 * 获取当前时间戳（10位）
 	 * @return date
@@ -74,7 +74,7 @@ public class DateUtil {
 	public static String getTimestamp(){
 		return Long.toString(System.currentTimeMillis() / 1000);
 	}
-	
+
 	/**
 	 * 获取当前时间到某一时刻的时间差
 	 * @return
